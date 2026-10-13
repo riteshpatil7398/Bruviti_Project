@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bruviti — Software License Usage &amp; Cost Analytics</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <span class="brand-badge">Bruviti AI</span>
+        <h1>Software License Usage &amp; Cost Analytics</h1>
+      </div>
+      <p class="header-subtitle">
+        Enterprise SaaS seat utilization, prorated spend monitoring, and idle license optimization.
+      </p>
+    </header>
+
+    <!-- Filter Control Bar -->
+    <section class="controls-card">
+      <form id="filterForm" class="filter-form">
+        <div class="form-group">
+          <label for="fromDate">From Date <span class="required">*</span></label>
+          <input type="date" id="fromDate" name="from" required value="2026-01-01">
+        </div>
+
+        <div class="form-group">
+          <label for="toDate">To Date <span class="required">*</span></label>
+          <input type="date" id="toDate" name="to" required value="2026-09-30">
+        </div>
+
+        <div class="form-group">
+          <label for="orgId">Organization Unit ID <span class="optional">(Optional)</span></label>
+          <input type="text" id="orgId" name="org" placeholder="e.g. ORG01 or ORG02" list="orgSuggestions">
+          <datalist id="orgSuggestions">
+            <option value="ORG01">Engineering (All 400 Users)</option>
+            <option value="ORG02">Platform</option>
+            <option value="ORG11">Product</option>
+            <option value="ORG20">Data</option>
+            <option value="ORG29">Quality</option>
+          </datalist>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" id="btnSubmit" class="btn btn-primary">
+            <span class="btn-text">Run Analysis</span>
+          </button>
+          <button type="button" id="btnReset" class="btn btn-secondary">Reset</button>
+        </div>
+      </form>
+
+      <!-- Quick Preset Buttons -->
+      <div class="preset-bar">
+        <span class="preset-label">Quick Windows:</span>
+        <button type="button" class="btn-chip" data-from="2026-01-01" data-to="2026-09-30">Jan–Sep 2026 (Full)</button>
+        <button type="button" class="btn-chip" data-from="2026-05-01" data-to="2026-05-31">May 2026</button>
+        <button type="button" class="btn-chip" data-from="2026-06-01" data-to="2026-06-30">June 2026</button>
+      </div>
+    </section>
+
+    <!-- Error Banner -->
+    <div id="errorBanner" class="alert alert-error" style="display: none;">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-content">
+        <strong id="errorTitle">Error</strong>
+        <p id="errorMessage"></p>
+      </div>
+      <button type="button" class="alert-close" id="closeError">&times;</button>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingIndicator" class="loading-container" style="display: none;">
+      <div class="spinner"></div>
+      <p>Computing license utilization &amp; cost metrics...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="empty-state">
+      <div class="empty-icon">📊</div>
+      <h3>No Analysis Run Yet</h3>
+      <p>Select a date window and click <strong>Run Analysis</strong> to inspect company-wide license spend and activity.</p>
+    </div>
+
+    <!-- Results Section -->
+    <main id="resultsSection" style="display: none;">
+      <!-- KPI Cards Grid -->
+      <section class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Licensed Users</span>
+            <span class="kpi-icon">👥</span>
+          </div>
+          <div class="kpi-value" id="kpiLicensedUsers">-</div>
+          <div class="kpi-subtext">Distinct seat holders in window</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Active Users</span>
+            <span class="kpi-icon">⚡</span>
+          </div>
+          <div class="kpi-value" id="kpiActiveUsers">-</div>
+          <div class="kpi-subtext">Users with counted activity</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Engagement Rate</span>
+            <span class="kpi-icon">📈</span>
+          </div>
+          <div class="kpi-value" id="kpiEngagementPct">-%</div>
+          <div class="kpi-progress-bar">
+            <div class="kpi-progress-fill" id="engagementFill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-header">
+            <span class="kpi-title">Total Spend</span>
+            <span class="kpi-icon">💵</span>
+          </div>
+          <div class="kpi-value text-accent" id="kpiSpend">$0.00</div>
+          <div class="kpi-subtext">Prorated on 30-day basis</div>
+        </div>
+
+        <div class="kpi-card kpi-warning">
+          <div class="kpi-header">
+            <span class="kpi-title">Idle Spend</span>
+            <span class="kpi-icon">⏳</span>
+          </div>
+          <div class="kpi-value text-warning" id="kpiIdleSpend">$0.00</div>
+          <div class="kpi-subtext" id="kpiIdlePct">Wasted on zero-usage seats</div>
+        </div>
+      </section>
+
+      <!-- Tool Breakdown Table -->
+      <section class="table-card">
+        <div class="table-header">
+          <div>
+            <h2>Tool-Wise Utilization &amp; Unit Economics</h2>
+            <p class="table-subtitle">Tool A through Tool E canonical ordering and cost per active user</p>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table" id="toolsTable">
+            <thead>
+              <tr>
+                <th>Tool</th>
+                <th>Licensed Users</th>
+                <th>Active Users</th>
+                <th>Engagement</th>
+                <th>Total Spend</th>
+                <th>Idle Spend</th>
+                <th>Cost / Active User</th>
+              </tr>
+            </thead>
+            <tbody id="toolsTableBody">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Bruviti AI Campus Hiring &bull; Software License Usage &amp; Cost Analytics &bull; Local Production Engine</p>
+    </footer>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
